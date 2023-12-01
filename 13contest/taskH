@@ -1,0 +1,336 @@
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+#include <vector>
+
+const double kDouble = 0.5;
+class Point {
+ public:
+  int64_t xx;
+  int64_t yy;
+  Point();
+  Point(int64_t other1, int64_t other2);
+  int64_t GetX() const;
+  int64_t GetY() const;
+};
+
+class Vector {
+ protected:
+  Point vector_;
+
+ public:
+  Vector();
+  explicit Vector(const Point& other1);
+  Vector(const Point& other1, const Point& other2);
+  Vector(int64_t ao, int64_t bo, int64_t co);
+  Point& GetVector();
+  const Point& GetVector() const;
+  int64_t GetX();
+  int64_t GetY();
+  double LenghtVector();
+};
+
+class Line : public Vector {
+ protected:
+  int64_t a_ = 0;
+  int64_t b_ = 0;
+  int64_t c_ = 0;
+  Point point_;
+  Point normal_;
+
+ public:
+  Line();
+  Line(int64_t ao, int64_t bo, int64_t co);
+  Line(const Point& other1, const Point& other2);
+  int64_t GetA() const;
+  int64_t GetB() const;
+  int64_t GetC() const;
+  Point& GetPoint();
+  const Point& GetPoint() const;
+  Point& GetNormal();
+  const Point& GetNormal() const;
+};
+
+class Ray : public Line {
+ public:
+  Ray();
+  Ray(const Point& other1, const Point& other2);
+};
+
+class Segment : public Ray {
+ private:
+  Point point_end_;
+
+ public:
+  Segment();
+  Segment(const Point& point1, const Point& point2);
+  Point& GetPointEnd();
+  const Point& GetPointEnd() const;
+};
+
+class Polygonic {
+ private:
+  int64_t n_ = 0;
+  std::vector<Point> array_point_;
+  std::vector<Segment> array_segment_;
+
+ public:
+  Polygonic();
+  Polygonic(int64_t n, std::vector<Point> array);
+  ~Polygonic();
+  int64_t SumVectorProduct();
+  long double Square();
+};
+
+Point::Point() : xx(0), yy(0) {}
+
+Point::Point(int64_t other1, int64_t other2) : xx(other1), yy(other2) {}
+
+bool operator==(Point other1, Point other2) {
+  return ((other1.GetX() == other2.GetX()) && (other1.GetY() == other2.GetY()));
+}
+
+int64_t Point::GetX() const { return xx; }
+
+int64_t Point::GetY() const { return yy; }
+
+Point operator-(const Point& other1, const Point& other2) {
+  return Point(other2.GetX() - other1.GetX(), other2.GetY() - other1.GetY());
+}
+
+Point operator-(const Point& point) { return Point() - point; }
+
+Point operator+(const Point& other1, const Point& other2) {
+  return Point(other2.GetX() + other1.GetX(), other2.GetY() + other1.GetY());
+}
+
+Vector::Vector() {
+  vector_.xx = 0;
+  vector_.yy = 0;
+}
+
+Vector::Vector(const Point& other1) : vector_(other1) {}
+
+Vector::Vector(const Point& other1, const Point& other2)
+    : vector_(other1 - other2) {}
+
+int64_t Vector::GetX() { return GetVector().GetX(); }
+
+int64_t Vector::GetY() { return GetVector().GetY(); }
+
+Point& Vector::GetVector() { return vector_; }
+
+const Point& Vector::GetVector() const { return vector_; }
+
+Vector operator+(const Vector& other1, const Vector& other2) {
+  return Vector(other1.GetVector() + other2.GetVector());
+}
+
+int64_t ScalarProduct(const Vector& other1, const Vector& other2) {
+  return other1.GetVector().GetX() * other2.GetVector().GetX() +
+         other1.GetVector().GetY() * other2.GetVector().GetY();
+}
+
+int64_t VectorProduct(const Vector& other1, const Vector& other2) {
+  return other1.GetVector().GetX() * other2.GetVector().GetY() -
+         other1.GetVector().GetY() * other2.GetVector().GetX();
+}
+
+Line::Line() : a_(0), b_(0), c_(0) {}
+
+Line::Line(int64_t ao, int64_t bo, int64_t co) : a_(ao), b_(bo), c_(co) {
+  vector_ = Point(-bo, ao);
+  normal_ = Point(ao, bo);
+  if (ao != 0) {
+    point_ = Point(static_cast<double>(-co) / ao, 0);
+  } else {
+    point_ = Point(0, static_cast<double>(-co) / bo);
+  }
+}
+
+Line::Line(const Point& other1, const Point& other2) {
+  point_ = other1;
+  vector_ = other2 - other1;
+  normal_ = Point(-vector_.GetY(), vector_.GetX());
+  a_ = normal_.GetX();
+  b_ = normal_.GetY();
+  c_ = -ScalarProduct(Vector(point_), Vector(normal_));
+}
+
+Ray::Ray() {
+  point_ = Point();
+  vector_ = Point();
+  normal_ = Point();
+}
+
+Ray::Ray(const Point& other1, const Point& other2) {
+  point_ = other1;
+  vector_ = other2 - other1;
+  normal_ = Point(-vector_.GetY(), vector_.GetX());
+  a_ = normal_.GetX();
+  b_ = normal_.GetY();
+  c_ = -ScalarProduct(Vector(point_), Vector(normal_));
+}
+
+Segment::Segment() {
+  vector_ = Point();
+  normal_ = Point();
+  point_ = Point();
+  point_end_ = Point();
+}
+
+Segment::Segment(const Point& point1, const Point& point2) {
+  point_ = point1;
+  point_end_ = point2;
+  vector_ = point2 - point1;
+  normal_ = Point(-vector_.GetY(), vector_.GetX());
+  a_ = normal_.GetX();
+  b_ = normal_.GetY();
+  c_ = -ScalarProduct(Vector(point_), Vector(normal_));
+}
+
+Polygonic::Polygonic(int64_t n, std::vector<Point> array) : n_(n) {
+  array_point_.resize(n_);
+  array_segment_.resize(n_);
+  for (int64_t i = 0; i < n; ++i) {
+    array_point_[i] = array[i];
+  }
+  for (int64_t i = 1; i < n; ++i) {
+    array_segment_[i - 1] = Segment(array_point_[i - 1], array_point_[i]);
+  }
+  array_segment_[n_ - 1] = Segment(array_point_[n_ - 1], array_point_[0]);
+}
+
+Polygonic::~Polygonic() { n_ = 0; }
+
+std::ostream& operator<<(std::ostream& out, const std::vector<Point>& polygon);
+
+int64_t Polygonic::SumVectorProduct() {
+  Point point = array_point_[1];
+  int64_t sum = 0;
+  for (int64_t i = 1; i < n_; ++i) {
+    sum += VectorProduct(Vector(array_point_[i] - point),
+                         Vector(array_point_[i - 1] - point));
+  }
+  sum += VectorProduct(Vector(array_point_[0] - point),
+                       Vector(array_point_[n_ - 1] - point));
+  return sum;
+}
+
+long double Polygonic::Square() {
+  int64_t distance = SumVectorProduct();
+  if (distance < 0) {
+    if ((distance % 2) == 0) {
+      return -distance / 2;
+    }
+    return -distance / 2 + static_cast<long double>(kDouble);
+  }
+  if ((distance % 2) == 0) {
+    return distance / 2;
+  }
+  return (distance / 2) + static_cast<long double>(kDouble);
+}
+
+void FindParent(Point& parent, const std::vector<Point>& vec) {
+  for (const auto& next : vec) {
+    if ((next.GetX() < parent.GetX()) ||
+        (next.GetX() == parent.GetX() && next.GetY() < parent.GetY())) {
+      parent = next;
+    }
+  }
+}
+
+std::vector<Point> ConvexHull(const std::vector<Point>& points) {
+  if (points.size() < 2) {
+    return points;
+  }
+  std::vector<Point> vec(points);
+  Point parent = vec[0];
+  int64_t count = 0;
+  FindParent(parent, vec);
+  for (size_t i = 0; i < points.size(); ++i) {
+    if (points[i] == parent) {
+      std::swap(vec[i], vec[count]);
+      ++count;
+    }
+  }
+
+  std::sort(vec.begin() + count, vec.end(),
+            [&parent](const Point& pa, const Point& pb) {
+              Vector vector_a(parent, pa);
+              Vector vector_b(parent, pb);
+              int64_t angle = VectorProduct(vector_a, vector_b);
+              if (angle != 0) {
+                return angle < 0;
+              }
+              return vector_a.GetY() * vector_a.GetY() +
+                         vector_a.GetX() * vector_a.GetX() <
+                     vector_b.GetX() * vector_b.GetX() +
+                         vector_b.GetY() * vector_b.GetY();
+            });
+
+  std::vector<Point> stack{vec[0], vec[1]};
+  Point next;
+  Point top;
+  Point previous;
+  for (size_t i = 2; i < vec.size(); ++i) {
+    next = vec[i];
+    top = stack.back();
+    previous = stack[stack.size() - 2];
+    while (VectorProduct(Vector(previous, top), Vector(previous, next)) >= 0) {
+      stack.pop_back();
+      if (stack.size() < 2) {
+        break;
+      }
+      top = stack.back();
+      previous = stack[stack.size() - 2];
+    }
+    stack.push_back(next);
+  }
+
+  next = vec[0];
+  top = stack.back();
+  previous = stack[stack.size() - 2];
+  while (VectorProduct(Vector(previous, top), Vector(previous, next)) >= 0) {
+    stack.pop_back();
+    if (stack.size() < 2) {
+      break;
+    }
+    top = stack.back();
+    previous = stack[stack.size() - 2];
+  }
+  return stack;
+}
+
+std::istream& operator>>(std::istream& io, Point& point) {
+  int64_t x;
+  int64_t y;
+  io >> x >> y;
+  point = Point(x, y);
+  return io;
+}
+
+std::ostream& operator<<(std::ostream& out, const std::vector<Point>& polygon) {
+  out << polygon.size() << '\n';
+  for (size_t i = 0; i < polygon.size(); ++i) {
+    out << polygon[i].GetX() << ' ' << polygon[i].GetY() << '\n';
+  }
+  out << Polygonic(polygon.size(), polygon).Square();
+  return out;
+}
+
+int main() {
+  Point point;
+  int64_t n1;
+  std::cin >> n1;
+  std::vector<Point> array(n1);
+  for (int64_t i = 0; i < n1; ++i) {
+    std::cin >> point;
+    array[i] = point;
+  }
+  std::cout << std::fixed;
+  std::cout << std::setprecision(1);
+  std::cout << ConvexHull(array);
+  return 0;
+}
