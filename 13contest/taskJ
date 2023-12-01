@@ -1,0 +1,347 @@
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+#include <vector>
+
+class Point {
+ public:
+  int64_t xx;
+  int64_t yy;
+  Point();
+  Point(int64_t other1, int64_t other2);
+  int64_t GetX() const;
+  int64_t GetY() const;
+  long double Lenght() const { return sqrt(xx * xx + yy * yy); }
+  Point& operator-=(const Point& other);
+};
+
+class Vector {
+ protected:
+  Point vector_;
+
+ public:
+  Vector();
+  explicit Vector(const Point& other1);
+  Vector(const Point& other1, const Point& other2);
+  Vector(int64_t ao, int64_t bo, int64_t co);
+  Point& GetVector();
+  const Point& GetVector() const;
+  int64_t GetX();
+  int64_t GetY();
+  double LenghtVector();
+};
+
+class Polygonic {
+ public:
+  int64_t nn = 0;
+  std::vector<Point> array_point;
+  Polygonic() = default;
+  Polygonic(int64_t n, std::vector<Point> array);
+  ~Polygonic();
+  int64_t SumVectorProduct();
+  long double Square();
+  void FixLeftPoint();
+};
+
+Point::Point() : xx(0), yy(0) {}
+
+Point::Point(int64_t other1, int64_t other2) : xx(other1), yy(other2) {}
+
+bool operator==(Point other1, Point other2) {
+  return ((other1.GetX() == other2.GetX()) && (other1.GetY() == other2.GetY()));
+}
+
+Point operator*(int koff, const Point& point) {
+  Point point_other = point;
+  point_other.xx *= koff;
+  point_other.yy *= koff;
+  return point_other;
+}
+
+int64_t Point::GetX() const { return xx; }
+
+int64_t Point::GetY() const { return yy; }
+
+Point operator-(const Point& other1, const Point& other2) {
+  return Point(other1.GetX() - other2.GetX(), other1.GetY() - other2.GetY());
+}
+
+Point& Point::operator-=(const Point& other) {
+  xx -= other.xx;
+  yy -= other.yy;
+  return *this;
+}
+
+Point operator-(const Point& point) { return Point() - point; }
+
+Point operator+(const Point& other1, const Point& other2) {
+  return Point(other2.GetX() + other1.GetX(), other2.GetY() + other1.GetY());
+}
+
+int64_t VectorProduct(const Point& other1, const Point& other2) {
+  return other1.xx * other2.yy - other1.yy * other2.xx;
+}
+
+bool operator<(Point other1, Point other2) {
+  if (VectorProduct(other1, other2) != 0) {
+    return VectorProduct(other1, other2) > 0;
+  }
+  return other1.Lenght() < other2.Lenght();
+}
+
+bool operator<=(Point other1, Point other2) {
+  if (VectorProduct(other1, other2) != 0) {
+    return VectorProduct(other1, other2) > 0;
+  }
+  return other1.Lenght() <= other2.Lenght();
+}
+
+Vector::Vector() {
+  vector_.xx = 0;
+  vector_.yy = 0;
+}
+
+Vector::Vector(const Point& other1) : vector_(other1) {}
+
+Vector::Vector(const Point& other1, const Point& other2)
+    : vector_(other2 - other1) {}
+
+int64_t Vector::GetX() { return GetVector().GetX(); }
+
+int64_t Vector::GetY() { return GetVector().GetY(); }
+
+Point& Vector::GetVector() { return vector_; }
+
+const Point& Vector::GetVector() const { return vector_; }
+
+Vector operator+(const Vector& other1, const Vector& other2) {
+  return Vector(other1.GetVector() + other2.GetVector());
+}
+
+int64_t ScalarProduct(const Vector& other1, const Vector& other2) {
+  return other1.GetVector().GetX() * other2.GetVector().GetX() +
+         other1.GetVector().GetY() * other2.GetVector().GetY();
+}
+
+int64_t VectorProduct(const Vector& other1, const Vector& other2) {
+  return other1.GetVector().GetX() * other2.GetVector().GetY() -
+         other1.GetVector().GetY() * other2.GetVector().GetX();
+}
+
+Polygonic::Polygonic(int64_t n, std::vector<Point> array) : nn(n) {
+  array_point.resize(nn);
+  for (int64_t i = 0; i < n; ++i) {
+    array_point[i] = array[i];
+  }
+}
+
+Polygonic::~Polygonic() { nn = 0; }
+
+std::istream& operator>>(std::istream& io, Point& point) {
+  int64_t x;
+  int64_t y;
+  io >> x >> y;
+  point = Point(x, y);
+  return io;
+}
+
+void Cin(Polygonic& polygon) {
+  int size;
+  std::cin >> size;
+  std::vector<Point> array(size);
+  Point point;
+  for (int i = 0; i < size; ++i) {
+    std::cin >> point;
+    array[i] = point;
+  }
+  polygon = Polygonic(size, array);
+}
+
+void Polygonic::FixLeftPoint() {
+  Point p0 = array_point[0];
+  int index = 0;
+  for (int i = 0; i < nn; ++i) {
+    if ((array_point[i].GetX() < p0.GetX()) ||
+        (array_point[i].GetX() == p0.GetX() &&
+         array_point[i].GetY() < p0.GetY())) {
+      p0 = array_point[i];
+      index = i;
+    }
+  }
+  std::vector<Point> new_array_point(nn);
+  for (int i = 0; i < nn; ++i) {
+    new_array_point[i] = array_point[(i + index) % nn];
+  }
+  array_point = new_array_point;
+}
+
+Polygonic SumMenkovsky(Polygonic& polygonic1, Polygonic& polygonic2) {
+  polygonic1.FixLeftPoint();
+  polygonic2.FixLeftPoint();
+  int index1 = 0;
+  int index2 = 0;
+  int64_t size1 = polygonic1.nn;
+  int64_t size2 = polygonic2.nn;
+  if ((size1 <= 2) || (size2 <= 2)) {
+    return Polygonic();
+  }
+  Point point1;
+  Point point2;
+  std::vector<Point> summ_array_point(polygonic1.nn + polygonic2.nn);
+  while ((index1 != polygonic1.nn) || (index2 != polygonic2.nn)) {
+    point1 = polygonic1.array_point[(index1 + 1) % size1] -
+             polygonic1.array_point[(index1) % size1];
+    point2 = polygonic2.array_point[(index2 + 1) % size2] -
+             polygonic2.array_point[(index2) % size2];
+    summ_array_point[index1 + index2] =
+        polygonic1.array_point[(index1) % size1] +
+        polygonic2.array_point[(index2) % size2];
+    (VectorProduct(point1, point2) > 0) ? ++index1 : ++index2;
+  }
+  return Polygonic(polygonic1.nn + polygonic2.nn, summ_array_point);
+}
+
+void Centrening(Polygonic& polygonic) {
+  Point point0 = polygonic.array_point[0];
+  for (int i = 0; i < polygonic.nn; ++i) {
+    polygonic.array_point[i] -= point0;
+  }
+}
+
+void FindParent(Point& parent, const std::vector<Point>& vec) {
+  for (const auto& next : vec) {
+    if ((next.GetX() < parent.GetX()) ||
+        (next.GetX() == parent.GetX() && next.GetY() < parent.GetY())) {
+      parent = next;
+    }
+  }
+}
+
+std::vector<Point> Reverse(std::vector<Point>& vec) {
+  std::vector<Point> temp(vec.size());
+  for (size_t i = 0; i < vec.size(); ++i) {
+    temp[i] = vec[(vec.size() - i) % vec.size()];
+  }
+  return temp;
+}
+
+Polygonic ConvexHull(std::vector<Point>& points) {
+  std::vector<Point> vec(points);
+  Point parent = vec[0];
+  int64_t count = 0;
+  FindParent(parent, vec);
+  for (size_t i = 0; i < points.size(); ++i) {
+    if (points[i] == parent) {
+      std::swap(vec[i], vec[count]);
+      ++count;
+    }
+  }
+
+  std::sort(vec.begin() + count, vec.end(),
+            [&parent](const Point& pa, const Point& pb) {
+              Vector vector_a(parent, pa);
+              Vector vector_b(parent, pb);
+              int64_t angle = VectorProduct(vector_a, vector_b);
+              if (angle != 0) {
+                return angle < 0;
+              }
+              return vector_a.GetY() * vector_a.GetY() +
+                         vector_a.GetX() * vector_a.GetX() <
+                     vector_b.GetX() * vector_b.GetX() +
+                         vector_b.GetY() * vector_b.GetY();
+            });
+
+  std::vector<Point> stack{vec[0], vec[1]};
+  Point next;
+  Point top;
+  Point previous;
+  for (size_t i = 2; i < vec.size(); ++i) {
+    next = vec[i];
+    top = stack.back();
+    previous = stack[stack.size() - 2];
+    while (VectorProduct(Vector(previous, top), Vector(previous, next)) >= 0) {
+      stack.pop_back();
+      if (stack.size() < 2) {
+        break;
+      }
+      top = stack.back();
+      previous = stack[stack.size() - 2];
+    }
+    stack.push_back(next);
+  }
+
+  next = vec[0];
+  top = stack.back();
+  previous = stack[stack.size() - 2];
+  while (VectorProduct(Vector(previous, top), Vector(previous, next)) >= 0) {
+    stack.pop_back();
+    if (stack.size() < 2) {
+      break;
+    }
+    top = stack.back();
+    previous = stack[stack.size() - 2];
+  }
+  stack = Reverse(stack);
+  return Polygonic(stack.size(), stack);
+}
+
+int64_t UpperBound(const Polygonic& polygonic, const Point& point) {
+  int64_t mid;
+  int64_t ll = 0;
+  int64_t rr = polygonic.nn - 1;
+  while (ll < rr) {
+    mid = (ll + rr) / 2;
+    if (polygonic.array_point[mid] <= point) {
+      ll = mid + 1;
+    } else {
+      rr = mid;
+    }
+  }
+  return ll;
+}
+
+bool InConvexPolygonic(const Point& point, Polygonic& polygonic) {
+  if (VectorProduct(point, polygonic.array_point[1]) > 0) {
+    return false;
+  }
+  if (VectorProduct(point, polygonic.array_point[polygonic.nn - 1]) < 0) {
+    return false;
+  }
+  auto iter = UpperBound(polygonic, point);
+  auto point_2 = polygonic.array_point[iter];
+  --iter;
+  auto point_1 = polygonic.array_point[iter];
+  if (VectorProduct(point_2, point) == 0) {
+    return (point_2.Lenght() >= point.Lenght());
+  }
+  auto temp1 = point - point_2;
+  auto temp2 = point_1 - point;
+  return (VectorProduct(temp1, temp2) >= 0);
+}
+
+bool Solution(const Point& point, const Point& point0, Polygonic& polygonic) {
+  return InConvexPolygonic((3 * point - point0), polygonic);
+}
+
+int main() {
+  Polygonic polygonic1;
+  Polygonic polygonic2;
+  Polygonic polygonic3;
+  Cin(polygonic1);
+  Cin(polygonic2);
+  Cin(polygonic3);
+  Polygonic temp = SumMenkovsky(polygonic1, polygonic2);
+  Polygonic polygonic = SumMenkovsky(temp, polygonic3);
+  polygonic = ConvexHull(polygonic.array_point);
+  Point point0 = polygonic.array_point[0];
+  Centrening(polygonic);
+  int count;
+  std::cin >> count;
+  Point point;
+  for (int i = 0; i < count; ++i) {
+    std::cin >> point;
+    std::cout << ((Solution(point, point0, polygonic)) ? "YES\n" : "NO\n");
+  }
+  return 0;
+}
